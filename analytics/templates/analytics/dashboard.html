@@ -1,0 +1,659 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>BI Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    font-family:Arial, Helvetica, sans-serif;
+    background:#f3f5f7;
+    padding:30px;
+
+}
+
+h1{
+
+    margin-bottom:25px;
+
+}
+
+h2{
+
+    margin-bottom:15px;
+
+}
+
+h3{
+
+    margin-bottom:15px;
+
+}
+
+/* =========================
+CSV
+========================= */
+
+.upload-box{
+
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:25px;
+
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
+
+}
+
+/* =========================
+フィルター
+========================= */
+
+.filter-box{
+
+    background:white;
+
+    padding:20px;
+
+    border-radius:12px;
+
+    margin-bottom:25px;
+
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
+
+}
+
+select{
+
+    padding:10px;
+
+}
+
+button{
+
+    padding:10px 18px;
+
+    background:#1976d2;
+
+    color:white;
+
+    border:none;
+
+    border-radius:6px;
+
+    cursor:pointer;
+
+}
+
+button:hover{
+
+    background:#1259a8;
+
+}
+
+/* =========================
+KPI
+========================= */
+
+.kpi{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:20px;
+
+    margin-bottom:30px;
+
+}
+
+.card{
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:12px;
+
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
+
+}
+
+.card h2{
+
+    font-size:16px;
+
+    color:#666;
+
+}
+
+.card p{
+
+    margin-top:15px;
+
+    font-size:34px;
+
+    font-weight:bold;
+
+}
+
+/* =========================
+グラフ
+========================= */
+
+.grid{
+
+    display:grid;
+
+    grid-template-columns:2fr 1fr;
+
+    gap:25px;
+
+    margin-bottom:25px;
+
+}
+
+.box{
+
+    background:white;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
+
+}
+
+.chart-container{
+
+    position:relative;
+
+    height:420px;
+
+}
+
+canvas{
+
+    width:100% !important;
+
+    height:100% !important;
+
+}
+
+/* =========================
+ランキング
+========================= */
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+th{
+
+    background:#1976d2;
+
+    color:white;
+
+    padding:12px;
+
+}
+
+td{
+
+    padding:12px;
+
+    border-bottom:1px solid #ddd;
+
+}
+
+tr:hover{
+
+    background:#f5f5f5;
+
+}
+
+/* =========================
+スマホ
+========================= */
+
+@media(max-width:900px){
+
+.kpi{
+
+grid-template-columns:1fr 1fr;
+
+}
+
+.grid{
+
+grid-template-columns:1fr;
+
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>売上BIダッシュボード</h1>
+<!-- =========================
+CSVアップロード
+========================= -->
+
+<div class="upload-box">
+
+    <h2>CSVアップロード</h2>
+
+    <form method="post" enctype="multipart/form-data">
+
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">
+            CSVアップロード
+        </button>
+
+    </form>
+
+</div>
+
+
+<!-- =========================
+フィルター
+========================= -->
+
+<div class="filter-box">
+
+    <form method="get">
+
+        <label><strong>カテゴリ：</strong></label>
+
+        <select name="category">
+
+            <option value="">すべて</option>
+
+            <option value="飲み物"
+                {% if selected_category == "飲み物" %}
+                selected
+                {% endif %}>
+                飲み物
+            </option>
+
+            <option value="食べ物"
+                {% if selected_category == "食べ物" %}
+                selected
+                {% endif %}>
+                食べ物
+            </option>
+
+            <option value="デザート"
+                {% if selected_category == "デザート" %}
+                selected
+                {% endif %}>
+                デザート
+            </option>
+
+        </select>
+
+        <button type="submit">
+            適用
+        </button>
+
+    </form>
+
+</div>
+
+
+<!-- =========================
+KPIカード
+========================= -->
+
+<div class="kpi">
+
+    <div class="card">
+    <h2>総売上</h2>
+    <p>¥{{ total_sales|intcomma }}</p>
+</div>
+
+
+    <div class="card">
+
+        <h2>商品数</h2>
+
+        <p>{{ product_count|intcomma }}</p>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>カテゴリ数</h2>
+
+        <p>{{ category_count|intcomma }}</p>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>対象月数</h2>
+
+        <p>{{ monthly_count|intcomma }}</p>
+
+    </div>
+
+</div>
+<!-- =========================
+グラフエリア
+========================= -->
+
+<div class="grid">
+
+    <!-- 月別売上 -->
+    <div class="box">
+
+        <h2>📈 月別売上</h2>
+
+        <div class="chart-container">
+            <canvas id="lineChart"></canvas>
+        </div>
+
+    </div>
+
+    <!-- カテゴリ別 -->
+    <div class="box">
+
+        <h2>🥧 カテゴリ構成比</h2>
+
+        <div class="chart-container">
+            <canvas id="pieChart"></canvas>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+商品ランキング
+========================= -->
+
+<div class="box">
+
+    <h2>🏆 商品ランキング</h2>
+
+    <div class="chart-container">
+        <canvas id="barChart"></canvas>
+    </div>
+
+</div>
+
+
+<!-- =========================
+ランキング一覧
+========================= -->
+
+<div class="box" style="margin-top:25px;">
+
+    <h2>📋 商品ランキング一覧</h2>
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>順位</th>
+
+                <th>商品名</th>
+
+                <th>販売数</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        {% for item in product_sales %}
+
+            <tr>
+
+                <td>{{ forloop.counter }}</td>
+
+                <td>{{ item.product__name }}</td>
+
+                <td>{{ item.total|intcomma }}</td>
+
+            </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+<script>
+
+/* ==========================
+   月別売上（折れ線）
+========================== */
+
+const monthLabels = [
+{% for item in monthly_sales %}
+"{{ item.date__month }}月",
+{% endfor %}
+];
+
+const monthData = [
+{% for item in monthly_sales %}
+{{ item.total }},
+{% endfor %}
+];
+
+new Chart(document.getElementById("lineChart"),{
+
+    type:"line",
+
+    data:{
+
+        labels:monthLabels,
+
+        datasets:[{
+
+            label:"月別売上",
+
+            data:monthData,
+
+            borderColor:"#1976d2",
+
+            backgroundColor:"rgba(25,118,210,0.15)",
+
+            borderWidth:3,
+
+            fill:true,
+
+            tension:0.4
+
+        }]
+
+    },
+
+    options:{
+
+        responsive:true,
+
+        maintainAspectRatio:false,
+
+        plugins:{
+
+            legend:{
+                display:true
+            }
+
+        },
+
+        scales:{
+
+            y:{
+                beginAtZero:true
+            }
+
+        }
+
+    }
+
+});
+
+
+/* ==========================
+   カテゴリ別（円グラフ）
+========================== */
+
+const pieLabels=[
+
+{% for item in category_sales %}
+"{{ item.product__category }}",
+{% endfor %}
+
+];
+
+const pieData=[
+
+{% for item in category_sales %}
+{{ item.total }},
+{% endfor %}
+
+];
+
+new Chart(document.getElementById("pieChart"),{
+
+    type:"pie",
+
+    data:{
+
+        labels:pieLabels,
+
+        datasets:[{
+
+            data:pieData,
+
+            backgroundColor:[
+
+                "#1976d2",
+                "#43a047",
+                "#fb8c00",
+                "#8e24aa",
+                "#ef5350"
+
+            ]
+
+        }]
+
+    },
+
+    options:{
+
+        responsive:true,
+
+        maintainAspectRatio:false
+
+    }
+
+});
+
+
+/* ==========================
+   商品ランキング（棒グラフ）
+========================== */
+
+const productLabels=[
+
+{% for item in product_sales %}
+"{{ item.product__name }}",
+{% endfor %}
+
+];
+
+const productData=[
+
+{% for item in product_sales %}
+{{ item.total }},
+{% endfor %}
+
+];
+
+new Chart(document.getElementById("barChart"),{
+
+    type:"bar",
+
+    data:{
+
+        labels:productLabels,
+
+        datasets:[{
+
+            label:"販売数",
+
+            data:productData,
+
+            backgroundColor:"#42a5f5"
+
+        }]
+
+    },
+
+    options:{
+
+        responsive:true,
+
+        maintainAspectRatio:false,
+
+        plugins:{
+
+            legend:{
+                display:false
+            }
+
+        },
+
+        scales:{
+
+            y:{
+                beginAtZero:true
+            }
+
+        }
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
