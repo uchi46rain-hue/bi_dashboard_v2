@@ -1,658 +1,285 @@
-{% load humanize %}
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-
-<meta charset="UTF-8">
-
-<title>BI Dashboard</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-
-    font-family:Arial, Helvetica, sans-serif;
-    background:#f3f5f7;
-    padding:30px;
-
-}
-
-h1{
-
-    margin-bottom:25px;
-
-}
-
-h2{
-
-    margin-bottom:15px;
-
-}
-
-h3{
-
-    margin-bottom:15px;
-
-}
-
-/* =========================
-CSV
-========================= */
-
-.upload-box{
-
-    background:white;
-    padding:20px;
-    border-radius:12px;
-    margin-bottom:25px;
-
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-
-}
-
-/* =========================
-フィルター
-========================= */
-
-.filter-box{
-
-    background:white;
-
-    padding:20px;
-
-    border-radius:12px;
-
-    margin-bottom:25px;
-
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-
-}
-
-select{
-
-    padding:10px;
-
-}
-
-button{
-
-    padding:10px 18px;
-
-    background:#1976d2;
-
-    color:white;
-
-    border:none;
-
-    border-radius:6px;
-
-    cursor:pointer;
-
-}
-
-button:hover{
-
-    background:#1259a8;
-
-}
-
-/* =========================
-KPI
-========================= */
-
-.kpi{
-
-    display:grid;
-
-    grid-template-columns:repeat(4,1fr);
-
-    gap:20px;
-
-    margin-bottom:30px;
-
-}
-
-.card{
-
-    background:white;
-
-    padding:25px;
-
-    border-radius:12px;
-
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-
-}
-
-.card h2{
-
-    font-size:16px;
-
-    color:#666;
-
-}
-
-.card p{
-
-    margin-top:15px;
-
-    font-size:34px;
-
-    font-weight:bold;
-
-}
-
-/* =========================
-グラフ
-========================= */
-
-.grid{
-
-    display:grid;
-
-    grid-template-columns:2fr 1fr;
-
-    gap:25px;
-
-    margin-bottom:25px;
-
-}
-
-.box{
-
-    background:white;
-
-    border-radius:12px;
-
-    padding:20px;
-
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-
-}
-
-.chart-container{
-
-    position:relative;
-
-    height:420px;
-
-}
-
-canvas{
-
-    width:100% !important;
-
-    height:100% !important;
-
-}
-
-/* =========================
-ランキング
-========================= */
-
-table{
-
-    width:100%;
-
-    border-collapse:collapse;
-
-}
-
-th{
-
-    background:#1976d2;
-
-    color:white;
-
-    padding:12px;
-
-}
-
-td{
-
-    padding:12px;
-
-    border-bottom:1px solid #ddd;
-
-}
-
-tr:hover{
-
-    background:#f5f5f5;
-
-}
-
-/* =========================
-スマホ
-========================= */
-
-@media(max-width:900px){
-
-.kpi{
-
-grid-template-columns:1fr 1fr;
-
-}
-
-.grid{
-
-grid-template-columns:1fr;
-
-}
-
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <title>店舗売上 BIダッシュボード</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .kpi-card { border-left: 5px solid; transition: transform 0.2s; }
+        .kpi-card:hover { transform: translateY(-3px); }
+        .card { border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .ai-comment-box { background-color: #eef7f2; border-left: 5px solid #198754; }
+    </style>
 </head>
-
 <body>
 
-<h1>売上BIダッシュボード</h1>
-<!-- =========================
-CSVアップロード
-========================= -->
-
-<div class="upload-box">
-
-    <h2>CSVアップロード</h2>
-
-    <form method="post" enctype="multipart/form-data">
-
-        {% csrf_token %}
-
-        {{ form.as_p }}
-
-        <button type="submit">
-            CSVアップロード
-        </button>
-
-    </form>
-
-</div>
-
-
-<!-- =========================
-フィルター
-========================= -->
-
-<div class="filter-box">
-
-    <form method="get">
-
-        <label><strong>カテゴリ：</strong></label>
-
-        <select name="category">
-
-            <option value="">すべて</option>
-
-            <option value="飲み物"
-                {% if selected_category == "飲み物" %}
-                selected
-                {% endif %}>
-                飲み物
-            </option>
-
-            <option value="食べ物"
-                {% if selected_category == "食べ物" %}
-                selected
-                {% endif %}>
-                食べ物
-            </option>
-
-            <option value="デザート"
-                {% if selected_category == "デザート" %}
-                selected
-                {% endif %}>
-                デザート
-            </option>
-
-        </select>
-
-        <button type="submit">
-            適用
-        </button>
-
-    </form>
-
-</div>
-
-
-<!-- =========================
-KPIカード
-========================= -->
-
-<div class="kpi">
-
-    <div class="card">
-    <h2>総売上</h2>
-    <p>¥{{ total_sales|intcomma }}</p>
-</div>
-
-
-    <div class="card">
-
-        <h2>商品数</h2>
-
-        <p>{{ product_count|intcomma }}</p>
-
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+        <div>
+            <h1 class="h3 mb-1 text-dark font-weight-bold">📈 店舗売上 BIダッシュボード</h1>
+            <p class="text-muted mb-0">POSデータとリアルタイム気象APIの連動による高度分析システム</p>
+        </div>
+        <div>
+            <form method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+                {% csrf_token %}
+                {{ form.file }}
+                <button type="submit" class="btn btn-primary text-nowrap">CSVアップロード</button>
+            </form>
+            <div class="text-end mt-1">
+                <a href="/download_template/" class="text-decoration-none small">⬇️ 最新CSVテンプレート</a>
+            </div>
+        </div>
     </div>
 
-
-    <div class="card">
-
-        <h2>カテゴリ数</h2>
-
-        <p>{{ category_count|intcomma }}</p>
-
-    </div>
-
-
-    <div class="card">
-
-        <h2>対象月数</h2>
-
-        <p>{{ monthly_count|intcomma }}</p>
-
-    </div>
-
-</div>
-<!-- =========================
-グラフエリア
-========================= -->
-
-<div class="grid">
-
-    <!-- 月別売上 -->
-    <div class="box">
-
-        <h2>📈 月別売上</h2>
-
-        <div class="chart-container">
-            <canvas id="lineChart"></canvas>
+    <form method="get" class="row g-3 align-items-end bg-white p-3 rounded shadow-sm mb-4">
+        
+        <div class="col-md-5">
+            <label class="form-label font-weight-bold text-secondary">📅 集計期間の指定</label>
+            <div class="input-group">
+                <a href="?start_date={{ prev_date }}&end_date={{ prev_date }}&category={{ selected_category }}&weather={{ selected_weather }}&display_type={{ display_type }}" class="btn btn-primary text-nowrap">
+                    ◀ 前の日
+                </a>
+                
+                <input type="date" name="start_date" class="form-control text-center" value="{{ start_date }}">
+                
+                <span class="input-group-text bg-light">〜</span>
+                
+                <input type="date" name="end_date" class="form-control text-center" value="{{ end_date }}">
+                
+                <a href="?start_date={{ next_date }}&end_date={{ next_date }}&category={{ selected_category }}&weather={{ selected_weather }}&display_type={{ display_type }}" class="btn btn-primary text-nowrap">
+                    次の日 ▶
+                </a>
+            </div>
         </div>
 
-    </div>
-
-    <!-- カテゴリ別 -->
-    <div class="box">
-
-        <h2>🥧 カテゴリ構成比</h2>
-
-        <div class="chart-container">
-            <canvas id="pieChart"></canvas>
+        <div class="col-md-2">
+            <label class="form-label text-secondary">🍔 カテゴリ</label>
+            <select name="category" class="form-select">
+                <option value="">全カテゴリ</option>
+                <option value="ドリンク" {% if selected_category == "ドリンク" %}selected{% endif %}>ドリンク</option>
+                <option value="フード" {% if selected_category == "フード" %}selected{% endif %}>フード</option>
+                <option value="ソフトドリンク" {% if selected_category == "ソフトドリンク" %}selected{% endif %}>ソフトドリンク</option>
+                <option value="デザート" {% if selected_category == "デザート" %}selected{% endif %}>デザート</option>
+            </select>
         </div>
 
+        <div class="col-md-2">
+            <label class="form-label text-secondary">☀️ 天気</label>
+            <select name="weather" class="form-select">
+                <option value="">すべての天気</option>
+                <option value="晴れ" {% if selected_weather == "晴れ" %}selected{% endif %}>晴れ</option>
+                <option value="曇り" {% if selected_weather == "曇り" %}selected{% endif %}>曇り</option>
+                <option value="雨" {% if selected_weather == "雨" %}selected{% endif %}>雨</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label text-secondary">📊 集計基準</label>
+            <select name="display_type" class="form-select">
+                <option value="amount" {% if display_type == "amount" %}selected{% endif %}>売上金額（円）</option>
+                <option value="quantity" {% if display_type == "quantity" %}selected{% endif %}>販売数量（個）</option>
+            </select>
+        </div>
+
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-success w-100">検索</button>
+        </div>
+    </form>
+
+    <div class="card mb-4">
+        <div class="card-body ai-comment-box rounded p-3">
+            <h5 class="card-title text-success font-weight-bold mb-2">🤖 フィルター連動型・動的AI分析インサイト</h5>
+            <ul class="mb-0 text-dark pl-3">
+                {% for comment in ai_comments %}
+                    <li class="mb-1">{{ comment }}</li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
 
-</div>
-
-
-<!-- =========================
-商品ランキング
-========================= -->
-
-<div class="box">
-
-    <h2>🏆 商品ランキング</h2>
-
-    <div class="chart-container">
-        <canvas id="barChart"></canvas>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 h-100 bg-white kpi-card" style="border-left-color: #0d6efd;">
+                <div class="text-muted small text-uppercase">総売上金額 / 総販売数</div>
+                <div class="h3 font-weight-bold text-dark mt-1">¥{{ total_sales }}</div>
+                <div class="text-secondary small mt-1">🛒 合計数量: {{ total_quantity }} 個</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 h-100 bg-white kpi-card" style="border-left-color: #198754;">
+                <div class="text-muted small text-uppercase">総来店客数（レシート数）</div>
+                <div class="h3 font-weight-bold text-dark mt-1">{{ total_customers }} 人</div>
+                <div class="text-secondary small mt-1">👤 期間内のユニーク客数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 h-100 bg-white kpi-card" style="border-left-color: #ffc107;">
+                <div class="text-muted small text-uppercase">平均客単価</div>
+                <div class="h3 font-weight-bold text-dark mt-1">¥{{ customer_price }}</div>
+                <div class="text-secondary small mt-1">🛍️ 1人あたり買上点数: {{ avg_purchase_items }} 点</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 h-100 bg-white kpi-card" style="border-left-color: #dc3545;">
+                <div class="text-muted small text-uppercase">取扱マスタ数</div>
+                <div class="h3 font-weight-bold text-dark mt-1">{{ product_count }} 品目</div>
+                <div class="text-secondary small mt-1">🗂️ 全 {{ category_count }} カテゴリ</div>
+            </div>
+        </div>
     </div>
 
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card p-3 h-100">
+                <h5 class="card-title text-secondary">📅 月別売上推移</h5>
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <h5 class="card-title text-secondary">🍔 カテゴリ別シェア</h5>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card p-3 h-100">
+                <h5 class="card-title text-secondary">🏆 商品別売上ランキング TOP10</h5>
+                <canvas id="productChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <h5 class="card-title text-secondary">🗓️ 曜日別売上傾向</h5>
+                <canvas id="weekdayChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card p-3 h-100">
+                <h5 class="card-title text-secondary d-flex justify-content-between align-items-center">
+                    <span>☔ 天気別売上実績</span>
+                    <span class="badge bg-secondary font-weight-normal" style="font-size: 0.82rem;">
+                        対象総日数: {{ total_days }}日間 
+                        {% if selected_weather %}
+                            （うち {{ selected_weather }}: {{ weather_days.晴れ|default:weather_days.曇り|default:weather_days.雨|default:0 }}日）
+                        {% endif %}
+                    </span>
+                </h5>
+                <canvas id="weatherChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3 h-100">
+                <h5 class="card-title text-secondary">🌡️ 気温帯別売上実績（5℃刻み）</h5>
+                <canvas id="temperatureChart"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
 
-
-<!-- =========================
-ランキング一覧
-========================= -->
-
-<div class="box" style="margin-top:25px;">
-
-    <h2>📋 商品ランキング一覧</h2>
-
-    <table>
-
-        <thead>
-
-            <tr>
-
-                <th>順位</th>
-
-                <th>商品名</th>
-
-                <th>販売数</th>
-
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-        {% for item in product_sales %}
-
-            <tr>
-
-                <td>{{ forloop.counter }}</td>
-
-                <td>{{ item.product__name }}</td>
-
-                <td>{{ item.total|intcomma }}</td>
-
-            </tr>
-
-        {% endfor %}
-
-        </tbody>
-
-    </table>
-
-</div>
 <script>
+    const primaryColor = '#0d6efd';
+    const successColor = '#198754';
+    const infoColor = '#0dcaf0';
+    const warningColor = '#ffc107';
+    const dangerColor = '#dc3545';
+    const grayColors = ['#495057', '#6c757d', '#adb5bd', '#ced4da', '#e9ecef'];
 
-/* ==========================
-   月別売上（折れ線）
-========================== */
-
-const monthLabels = [
-{% for item in monthly_sales %}
-"{{ item.date__month }}月",
-{% endfor %}
-];
-
-const monthData = [
-{% for item in monthly_sales %}
-{{ item.total }},
-{% endfor %}
-];
-
-new Chart(document.getElementById("lineChart"),{
-
-    type:"line",
-
-    data:{
-
-        labels:monthLabels,
-
-        datasets:[{
-
-            label:"月別売上",
-
-            data:monthData,
-
-            borderColor:"#1976d2",
-
-            backgroundColor:"rgba(25,118,210,0.15)",
-
-            borderWidth:3,
-
-            fill:true,
-
-            tension:0.4
-
-        }]
-
-    },
-
-    options:{
-
-        responsive:true,
-
-        maintainAspectRatio:false,
-
-        plugins:{
-
-            legend:{
-                display:true
-            }
-
-        },
-
-        scales:{
-
-            y:{
-                beginAtZero:true
-            }
-
+    // 1. 月別売上推移
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'line',
+        data: {
+            labels: [{% for item in monthly_sales %}'{{ item.month }}月',{% endfor %}],
+            datasets: [{
+                label: '{% if display_type == "amount" %}売上金額（円）{% else %}販売数量（個）{% endif %}',
+                data: [{% for item in monthly_sales %}{{ item.total }},{% endfor %}],
+                borderColor: primaryColor,
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true,
+                tension: 0.2
+            }]
         }
+    });
 
-    }
-
-});
-
-
-/* ==========================
-   カテゴリ別（円グラフ）
-========================== */
-
-const pieLabels=[
-
-{% for item in category_sales %}
-"{{ item.product__category }}",
-{% endfor %}
-
-];
-
-const pieData=[
-
-{% for item in category_sales %}
-{{ item.total }},
-{% endfor %}
-
-];
-
-new Chart(document.getElementById("pieChart"),{
-
-    type:"pie",
-
-    data:{
-
-        labels:pieLabels,
-
-        datasets:[{
-
-            data:pieData,
-
-            backgroundColor:[
-
-                "#1976d2",
-                "#43a047",
-                "#fb8c00",
-                "#8e24aa",
-                "#ef5350"
-
-            ]
-
-        }]
-
-    },
-
-    options:{
-
-        responsive:true,
-
-        maintainAspectRatio:false
-
-    }
-
-});
-
-
-/* ==========================
-   商品ランキング（棒グラフ）
-========================== */
-
-const productLabels=[
-
-{% for item in product_sales %}
-"{{ item.product__name }}",
-{% endfor %}
-
-];
-
-const productData=[
-
-{% for item in product_sales %}
-{{ item.total }},
-{% endfor %}
-
-];
-
-new Chart(document.getElementById("barChart"),{
-
-    type:"bar",
-
-    data:{
-
-        labels:productLabels,
-
-        datasets:[{
-
-            label:"販売数",
-
-            data:productData,
-
-            backgroundColor:"#42a5f5"
-
-        }]
-
-    },
-
-    options:{
-
-        responsive:true,
-
-        maintainAspectRatio:false,
-
-        plugins:{
-
-            legend:{
-                display:false
-            }
-
-        },
-
-        scales:{
-
-            y:{
-                beginAtZero:true
-            }
-
+    // 2. カテゴリ別シェア
+    new Chart(document.getElementById('categoryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: [{% for item in category_sales %}'{{ item.product__category }}',{% endfor %}],
+            datasets: [{
+                data: [{% for item in category_sales %}{{ item.total }},{% endfor %}],
+                backgroundColor: [primaryColor, successColor, warningColor, dangerColor]
+            }]
         }
+    });
 
-    }
+    // 3. 商品別売上ランキング
+    new Chart(document.getElementById('productChart'), {
+        type: 'bar',
+        data: {
+            labels: [{% for item in product_sales %}'{{ item.product__name }}',{% endfor %}],
+            datasets: [{
+                label: '{% if display_type == "amount" %}売上金額（円）{% else %}販売数量（個）{% endif %}',
+                data: [{% for item in product_sales %}{{ item.total }},{% endfor %}],
+                backgroundColor: infoColor
+            }]
+        },
+        options: { indexAxis: 'y' }
+    });
 
-});
+    // 4. 曜日別売上傾向
+    new Chart(document.getElementById('weekdayChart'), {
+        type: 'bar',
+        data: {
+            labels: [{% for item in weekday_sales %}'{{ item.weekday }}',{% endfor %}],
+            datasets: [{
+                label: '{% if display_type == "amount" %}売上金額（円）{% else %}販売数量（個）{% endif %}',
+                data: [{% for item in weekday_sales %}{{ item.total }},{% endfor %}],
+                backgroundColor: grayColors[0]
+            }]
+        }
+    });
 
+    // 5. 天気別売上（各天気のラベルに該当の件数を自動埋め込み）
+    new Chart(document.getElementById('weatherChart'), {
+        type: 'bar',
+        data: {
+            labels: [
+                '晴れ ({{ weather_days.晴れ|default:0 }}日)', 
+                '曇り ({{ weather_days.曇り|default:0 }}日)', 
+                '雨 ({{ weather_days.雨|default:0 }}日)'
+            ],
+            datasets: [{
+                label: '{% if display_type == "amount" %}売上金額（円）{% else %}販売数量（個）{% endif %}',
+                data: [
+                    {% for item in weather_sales %}{% if item.weather == "晴れ" %}{{ item.total }}{% endif %}{% endfor %},
+                    {% for item in weather_sales %}{% if item.weather == "曇り" %}{{ item.total }}{% endif %}{% endfor %},
+                    {% for item in weather_sales %}{% if item.weather == "雨" %}{{ item.total }}{% endif %}{% endfor %}
+                ],
+                backgroundColor: [warningColor, '#ced4da', primaryColor]
+            }]
+        }
+    });
+
+    // 6. 気温帯別売上
+    new Chart(document.getElementById('temperatureChart'), {
+        type: 'bar',
+        data: {
+            labels: [{% for item in temperature_sales %}'{{ item.temp_range }}',{% endfor %}],
+            datasets: [{
+                label: '{% if display_type == "amount" %}売上金額（円）{% else %}販売数量（個）{% endif %}',
+                data: [{% for item in temperature_sales %}{{ item.total }},{% endfor %}],
+                backgroundColor: dangerColor
+            }]
+        }
+    });
 </script>
 
 </body>
